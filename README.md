@@ -1,3 +1,5 @@
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new/template/dokuwiki?utm_medium=integration&utm_source=button&utm_campaign=dokuwiki)
+
 # DokuWiki on Railway
 
 One-click [DokuWiki](https://www.dokuwiki.org/) for [Railway](https://railway.com): the simple, file-based wiki that needs no database. Every page is a plain text file on a Railway volume.
