@@ -6,13 +6,14 @@ One-click [DokuWiki](https://www.dokuwiki.org/) for [Railway](https://railway.co
 
 | Service | Source | Notes |
 |---|---|---|
-| `DokuWiki` | this repo (`Dockerfile`) | Official image `dokuwiki/dokuwiki:2026-07-14c` pinned by digest, Apache + PHP 8.4, volume at `/storage`, health check `/health.php` |
+| `DokuWiki` | this repo (`Dockerfile`) | Official image `dokuwiki/dokuwiki:2026-07-14c` pinned by digest, Apache + PHP 8.4, volume at `/storage`, health check `/healthz` |
 
 DokuWiki version: **2026-07-14c** (latest stable release).
 
 The wrapper in this repo is small:
 
 - `railway-start.sh` makes Apache listen on `PORT`, prepares the `/storage` volume like the upstream entrypoint, runs the first-boot installer, then hands over to the upstream entrypoint.
+- `railway-healthz.conf` serves the upstream health check (`/health.php`) as `/healthz` too, because Railway's health check path can't contain a dot.
 - `railway-install.php` does what DokuWiki's web installer does, without the browser: on the first boot it creates the admin account from `ADMIN_USER` / `ADMIN_PASSWORD`, turns on access control, disables self-registration and trusts Railway's proxy for HTTPS detection. So `install.php` is never left open for whoever reaches the site first. On later boots it changes nothing, so settings you make in the admin UI stay.
 
 ## Variables
