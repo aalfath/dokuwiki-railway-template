@@ -12,7 +12,7 @@ DokuWiki version: **2026-07-14c** (latest stable release).
 
 The wrapper in this repo is small:
 
-- `railway-start.sh` makes Apache listen on `PORT`, prepares the `/storage` volume like the upstream entrypoint, runs the first-boot installer, then hands over to the upstream entrypoint.
+- `railway-start.sh` makes Apache listen on `PORT`, keeps only Apache's `mpm_prefork` module (Railway's build can re-enable `mpm_event`, and Apache then won't start), prepares the `/storage` volume with the upstream setup script, runs the first-boot installer, and starts Apache the way the upstream entrypoint does.
 - `railway-healthz.conf` serves the upstream health check (`/health.php`) as `/healthz` too, because Railway's health check path can't contain a dot.
 - `railway-install.php` does what DokuWiki's web installer does, without the browser: on the first boot it creates the admin account from `ADMIN_USER` / `ADMIN_PASSWORD`, turns on access control, disables self-registration and trusts Railway's proxy for HTTPS detection. So `install.php` is never left open for whoever reaches the site first. On later boots it changes nothing, so settings you make in the admin UI stay.
 

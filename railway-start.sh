@@ -5,12 +5,20 @@
 #  3. On the first boot only, run DokuWiki's installer headlessly with the
 #     admin account from the environment, so the public install.php is never
 #     open to whoever reaches the site first.
-#  4. Hand over to the upstream entrypoint (Apache in the foreground).
+#  4. Start Apache in the foreground, as the upstream entrypoint does.
 set -euo pipefail
 
 PORT="${PORT:-8080}"
 case "$PORT" in (*[!0-9]*|'') echo "railway-start: PORT must be a number" >&2; exit 1;; esac
 echo "Listen ${PORT}" > /etc/apache2/ports.conf
+
+# PHP's Apache image runs mpm_prefork only. Railway's builder can bring back
+# the base image's mpm_event links, and Apache then refuses to start with
+# "AH00534: More than one MPM loaded", so keep prefork and drop the others.
+if [ -w /etc/apache2/mods-enabled ]; then
+  rm -f /etc/apache2/mods-enabled/mpm_event.* /etc/apache2/mods-enabled/mpm_worker.*
+  [ -e /etc/apache2/mods-enabled/mpm_prefork.load ] || a2enmod -q mpm_prefork >/dev/null
+fi
 
 export ADMIN_USER="${ADMIN_USER:-admin}"
 export ADMIN_EMAIL="${ADMIN_EMAIL:-admin@example.com}"
@@ -34,11 +42,15 @@ if [ "$(id -u)" -eq 0 ]; then
   mkdir -p /storage
   chown -R www-data:www-data /storage
 fi
-run_as_www /dokuwiki-storagesetup.sh >/dev/null
+# Same steps as /dokuwiki-entrypoint.sh, without its `set -x` trace (it can hit
+# Railway's log rate limit and hide the lines that matter).
+echo "railway-start: preparing /storage (uid $(id -u))"
+run_as_www /dokuwiki-storagesetup.sh >/dev/null 2>&1 || { echo "railway-start: storage setup failed" >&2; run_as_www bash -x /dokuwiki-storagesetup.sh; exit 1; }
 
 if ! run_as_www php /railway-install.php; then
   echo "railway-start: first-boot install failed; not starting DokuWiki so install.php is never exposed." >&2
   exit 1
 fi
 
-exec /dokuwiki-entrypoint.sh
+echo "railway-start: starting Apache on port ${PORT}"
+exec docker-php-entrypoint apache2-foreground
